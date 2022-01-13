@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/user"
@@ -11,7 +12,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/open-cluster-management/governance-policy-propagator/test/utils"
+	"github.com/stolostron/governance-policy-propagator/test/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,18 +56,18 @@ var _ = BeforeSuite(func() {
 	gvrEvent = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "events"}
 	clientManaged = NewKubeClient("", "", "")
 	clientManagedDynamic = NewKubeClientDynamic("", "", "")
-	defaultImageRegistry = "quay.io/open-cluster-management"
+	defaultImageRegistry = "quay.io/stolostron"
 	defaultImagePullSecretName = "multiclusterhub-operator-pull-secret"
 	testNamespace = "managed"
 	defaultTimeoutSeconds = 30
 	By("Create Namesapce if needed")
 	namespacesHub := clientManaged.CoreV1().Namespaces()
-	if _, err := namespacesHub.Get(testNamespace, metav1.GetOptions{}); err != nil && errors.IsNotFound(err) {
-		Expect(namespacesHub.Create(&corev1.Namespace{
+	if _, err := namespacesHub.Get(context.TODO(), testNamespace, metav1.GetOptions{}); err != nil && errors.IsNotFound(err) {
+		Expect(namespacesHub.Create(context.TODO(), &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: testNamespace,
 			},
-		})).NotTo(BeNil())
+		}, metav1.CreateOptions{})).NotTo(BeNil())
 	}
 	By("Create trustedcontainerpolicy CRD")
 	utils.Kubectl("apply", "-f", "../resources/policies.ibm.com_trustedcontainerpolicies_crd.yaml")
