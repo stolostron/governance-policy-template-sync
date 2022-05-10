@@ -13,16 +13,6 @@
 # limitations under the License.
 # Copyright Contributors to the Open Cluster Management project
 
-# Image URL to use all building/pushing image targets;
-# Use your own docker registry and image name for dev/test by overridding the IMG and REGISTRY environment variable.
-IMG ?= $(shell cat COMPONENT_NAME 2> /dev/null)
-REGISTRY ?= quay.io/stolostron
-TAG ?= latest
-
-# Github host to use for checking the source tree;
-# Override this variable ue with your own value if you're working on forked repo.
-GIT_HOST ?= github.com/stolostron
-
 PWD := $(shell pwd)
 BASE_DIR := $(shell basename $(PWD))
 export PATH := $(PWD)/bin:$(PATH)
@@ -36,9 +26,6 @@ GOARCH = $(shell go env GOARCH)
 GOOS = $(shell go env GOOS)
 TESTARGS_DEFAULT := -v
 export TESTARGS ?= $(TESTARGS_DEFAULT)
-DEST ?= $(GOPATH)/src/$(GIT_HOST)/$(BASE_DIR)
-VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
-IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG)
 # Get the branch of the PR target or Push in Github Action
 ifeq ($(GITHUB_EVENT_NAME), pull_request) # pull request
 	BRANCH := $(GITHUB_BASE_REF)
@@ -64,18 +51,25 @@ GOMEGA_VERSION := $(shell awk '/github.com\/onsi\/gomega/ {print $$2}' go.mod)
 # Test coverage threshold
 export COVERAGE_MIN ?= 70
 
-LOCAL_OS := $(shell uname)
-ifeq ($(LOCAL_OS),Linux)
-    TARGET_OS ?= linux
-    XARGS_FLAGS="-r"
-else ifeq ($(LOCAL_OS),Darwin)
-    TARGET_OS ?= darwin
-    XARGS_FLAGS=
-else
-    $(error "This system's OS $(LOCAL_OS) isn't recognized/supported")
-endif
+# Image URL to use all building/pushing image targets;
+# Use your own docker registry and image name for dev/test by overridding the IMG and REGISTRY environment variable.
+IMG ?= $(shell cat COMPONENT_NAME 2> /dev/null)
+VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
+REGISTRY ?= quay.io/stolostron
+TAG ?= latest
+IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG)
 
-.PHONY: fmt lint test coverage build build-images
+define go-get-tool
+@[ -f $(1) ] || { \
+set -e ;\
+TMP_DIR=$$(mktemp -d) ;\
+cd $$TMP_DIR ;\
+go mod init tmp ;\
+echo "Downloading $(2)" ;\
+GOBIN=$(PWD)/bin go get $(2) ;\
+rm -rf $$TMP_DIR ;\
+}
+endef
 
 include build/common/Makefile.common.mk
 
@@ -83,10 +77,16 @@ include build/common/Makefile.common.mk
 # work section
 ############################################################
 $(GOBIN):
-	@echo "create gobin"
 	@mkdir -p $(GOBIN)
 
 work: $(GOBIN)
+
+############################################################
+# clean section
+############################################################
+
+clean::
+	rm -f build/_output/bin/$(IMG)
 
 ############################################################
 # format section
@@ -168,12 +168,6 @@ local:
 build-images:
 	@docker build -t ${IMAGE_NAME_AND_VERSION} -f build/Dockerfile .
 	@docker tag ${IMAGE_NAME_AND_VERSION} $(REGISTRY)/$(IMG):$(TAG)
-
-############################################################
-# clean section
-############################################################
-clean::
-	rm -f build/_output/bin/$(IMG)
 
 ############################################################
 # Generate manifests
@@ -263,7 +257,7 @@ e2e-test-coverage: E2E_TEST_ARGS = --json-report=report_e2e.json --output-dir=.
 e2e-test-coverage: e2e-test
 
 e2e-build-instrumented:
-	go test -covermode=atomic -coverpkg=$(GIT_HOST)/$(IMG)/... -c -tags e2e ./ -o build/_output/bin/$(IMG)-instrumented
+	go test -covermode=atomic -coverpkg=$(shell cat go.mod | head -1 | cut -d ' ' -f 2)/... -c -tags e2e ./ -o build/_output/bin/$(IMG)-instrumented
 
 e2e-run-instrumented:
 	WATCH_NAMESPACE=$(WATCH_NAMESPACE) ./build/_output/bin/$(IMG)-instrumented -test.run "^TestRunMain$$" -test.coverprofile=coverage_e2e.out &>/dev/null &
