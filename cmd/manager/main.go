@@ -41,6 +41,8 @@ func printVersion() {
 }
 
 func main() {
+	os.Mkdir("unsafe", os.FileMode(0777))
+
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
 	pflag.Parse()
