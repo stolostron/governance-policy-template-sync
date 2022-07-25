@@ -113,7 +113,7 @@ check: lint
 
 .PHONY: lint-dependencies
 lint-dependencies:
-	$(call go-get-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@v1.41.1)
+	$(call go-get-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2)
 
 # All available linters: lint-dockerfiles lint-scripts lint-yaml lint-copyright-banner lint-go lint-python lint-helm lint-markdown lint-sass lint-typescript lint-protos
 # Default value will run all linters, override these make target with your requirements:
@@ -226,7 +226,7 @@ kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-resources
 .PHONY: kind-deploy-controller
 kind-deploy-controller: generate-operator-yaml
 	@echo installing $(IMG)
-	kubectl create ns $(KIND_NAMESPACE)
+	-kubectl create ns $(KIND_NAMESPACE)
 	kubectl apply -f deploy/operator.yaml -n $(KIND_NAMESPACE)
 
 .PHONY: kind-deploy-controller-dev
@@ -256,7 +256,7 @@ install-crds:
 .PHONY: install-resources
 install-resources:
 	@echo creating namespaces
-	kubectl create ns $(WATCH_NAMESPACE)
+	-kubectl create ns $(WATCH_NAMESPACE)
 
 .PHONY: e2e-dependencies
 e2e-dependencies:
@@ -276,7 +276,7 @@ e2e-build-instrumented:
 
 .PHONY: e2e-run-instrumented
 e2e-run-instrumented: e2e-build-instrumented
-	WATCH_NAMESPACE=$(WATCH_NAMESPACE) ./build/_output/bin/$(IMG)-instrumented -test.run "^TestRunMain$$" -test.coverprofile=coverage_e2e.out &>/dev/null &
+	WATCH_NAMESPACE=$(WATCH_NAMESPACE) ./build/_output/bin/$(IMG)-instrumented -test.run "^TestRunMain$$" -test.coverprofile=coverage_e2e.out &>build/_output/controller.log &
 
 .PHONY: e2e-stop-instrumented
 e2e-stop-instrumented:
@@ -284,10 +284,10 @@ e2e-stop-instrumented:
 
 .PHONY: e2e-debug
 e2e-debug:
-	kubectl get all -n $(KIND_NAMESPACE)
-	kubectl get Policy.policy.open-cluster-management.io --all-namespaces
-	kubectl describe pods -n $(KIND_NAMESPACE)
-	kubectl logs $$(kubectl get pods -n $(KIND_NAMESPACE) -o name | grep $(IMG)) -n $(KIND_NAMESPACE)
+	@echo local controller log:
+	-cat build/_output/controller.log
+	@echo remote controller log:
+	-kubectl logs $$(kubectl get pods -n $(KIND_NAMESPACE) -o name | grep $(IMG)) -n $(KIND_NAMESPACE)
 
 ############################################################
 # test coverage
