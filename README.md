@@ -43,5 +43,5 @@ make kind-delete-cluster
 - The `governance-policy-template-sync` is part of the `open-cluster-management` community. For more information, visit: [open-cluster-management.io](https://open-cluster-management.io).
 
 <!---
-Date: April/29/2022
+Date: 09/12/2022
 -->
