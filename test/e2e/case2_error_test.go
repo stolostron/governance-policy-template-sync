@@ -237,6 +237,32 @@ var _ = Describe("Test error handling", func() {
 		By("Checking for the error event")
 		Eventually(checkForEvent("default.case2-empty-templates", ""), defaultTimeoutSeconds, 1).Should(BeFalse())
 	})
+	It("should throw a noncompliance event if the template already exists outside of a policy", func() {
+		By("Creating the ConfigurationPolicy on the managed cluster directly")
+		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/working-policy-configpol.yaml",
+			"-n", testNamespace)
+		Expect(err).Should(BeNil())
+
+		managedPlc := utils.GetWithTimeout(
+			clientManagedDynamic,
+			gvrConfigurationPolicy,
+			"case2-config-policy",
+			testNamespace,
+			true,
+			defaultTimeoutSeconds)
+		ExpectWithOffset(1, managedPlc).NotTo(BeNil())
+
+		_, err = utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/working-policy.yaml",
+			"-n", testNamespace)
+		Expect(err).Should(BeNil())
+
+		By("Checking for the error event")
+		Eventually(
+			checkForEvent("default.case2-test-policy", "already exists outside of a Policy"),
+			defaultTimeoutSeconds,
+			1,
+		).Should(BeTrue())
+	})
 })
 
 func checkForEvent(policyName, msgSubStr string) func() bool {
