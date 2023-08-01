@@ -18,18 +18,18 @@ import (
 var _ = Describe("Test error handling", func() {
 	AfterEach(func() {
 		_, err := utils.KubectlWithOutput("delete", "policies", "--all", "-A")
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 		_, err = utils.KubectlWithOutput("delete", "configurationpolicies", "--all", "-A")
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 		_, err = utils.KubectlWithOutput("delete", "events", "--all", "-A")
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 	})
 	It("should not override remediationAction if doesn't exist on parent policy", func() {
 		By("Creating ../resources/case2_error_test/remediation-action-not-exists.yaml on managed cluster in ns:" +
 			testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f",
 			"../resources/case2_error_test/remediation-action-not-exists.yaml", "-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() interface{} {
 			trustedPlc := utils.GetWithTimeout(clientManagedDynamic, gvrConfigurationPolicy,
 				"case2-remedation-action-not-exists-configpolicy", testNamespace, true,
@@ -41,7 +41,7 @@ var _ = Describe("Test error handling", func() {
 			testNamespace)
 		_, err = utils.KubectlWithOutput("apply", "-f",
 			"../resources/case2_error_test/remediation-action-not-exists2.yaml", "-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		By("Checking the case2-remedation-action-not-exists-configpolicy CR")
 		yamlTrustedPlc := utils.ParseYaml(
 			"../resources/case2_error_test/remedation-action-not-exists-configpolicy.yaml")
@@ -58,7 +58,7 @@ var _ = Describe("Test error handling", func() {
 			testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/template-decode-error.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		By("Checking for event with decode err on managed cluster in ns:" + testNamespace)
 		Eventually(
 			checkForEvent("default.case2-template-decode-error", "template-error; Failed to decode policy template"),
@@ -71,7 +71,7 @@ var _ = Describe("Test error handling", func() {
 			testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/template-name-error.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		By("Checking for event with missing name err on managed cluster in ns:" + testNamespace)
 		Eventually(
 			checkForEvent("default.case2-template-name-error", "template-error; Failed to get name from policy"),
@@ -84,7 +84,7 @@ var _ = Describe("Test error handling", func() {
 			testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/template-mapping-error.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		By("Checking for event with decode err on managed cluster in ns:" + testNamespace)
 		Eventually(
 			checkForEvent("default.case2-template-mapping-error", "template-error; Mapping not found"),
@@ -97,13 +97,13 @@ var _ = Describe("Test error handling", func() {
 			testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/working-policy.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		// wait for original policy to be processed before creating duplicate policy
 		utils.GetWithTimeout(clientManagedDynamic, gvrConfigurationPolicy,
 			"case2-config-policy", testNamespace, true, defaultTimeoutSeconds)
 		_, err = utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/working-policy-duplicate.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		By("Creating event with duplicate err on managed cluster in ns:" + testNamespace)
 		Eventually(
 			checkForEvent("default.case2-test-policy-duplicate", "Template name must be unique"),
@@ -116,7 +116,7 @@ var _ = Describe("Test error handling", func() {
 			testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/middle-template-error.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking for the other template objects")
 		utils.GetWithTimeout(clientManagedDynamic, gvrConfigurationPolicy,
@@ -136,7 +136,7 @@ var _ = Describe("Test error handling", func() {
 			testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/working-policy.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		utils.ListWithTimeout(clientManagedDynamic, gvrConfigurationPolicy, metav1.ListOptions{},
 			1, true, defaultTimeoutSeconds)
 
@@ -146,7 +146,7 @@ var _ = Describe("Test error handling", func() {
 		cfgInt := clientManagedDynamic.Resource(gvrConfigurationPolicy).Namespace(testNamespace)
 		_, err = cfgInt.Patch(context.TODO(), "case2-config-policy", types.JSONPatchType,
 			compliancePatch, metav1.PatchOptions{}, "status")
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Patching the policy to make the template invalid")
 		errorPatch := []byte(`[{` +
@@ -156,7 +156,7 @@ var _ = Describe("Test error handling", func() {
 		polInt := clientManagedDynamic.Resource(gvrPolicy).Namespace(testNamespace)
 		_, err = polInt.Patch(context.TODO(), "default.case2-test-policy", types.JSONPatchType,
 			errorPatch, metav1.PatchOptions{})
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking for the error event")
 		Eventually(
@@ -172,20 +172,20 @@ var _ = Describe("Test error handling", func() {
 			`"value":{"details":[{"history":[{"message":"template-error;"}]}]}}]`)
 		_, err = polInt.Patch(context.TODO(), "default.case2-test-policy", types.JSONPatchType,
 			statusPatch, metav1.PatchOptions{}, "status")
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking that the complianceState is still on the configuration policy")
 		cfgPolicy, err := cfgInt.Get(context.TODO(), "case2-config-policy", metav1.GetOptions{}, "status")
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 		compState, found, err := unstructured.NestedString(cfgPolicy.Object, "status", "compliant")
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 		Expect(found).To(BeTrue())
 		Expect(compState).To(Equal("testing"))
 
 		By("Re-applying the working policy")
 		_, err = utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/working-policy.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking that the complianceState is removed on the configuration policy")
 		Eventually(func() bool {
@@ -204,7 +204,7 @@ var _ = Describe("Test error handling", func() {
 			testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/non-config-hubtemplate.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking for the error event")
 		Eventually(
@@ -218,7 +218,7 @@ var _ = Describe("Test error handling", func() {
 			testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/invalid-severity-template.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking for the error event")
 		Eventually(
@@ -232,7 +232,7 @@ var _ = Describe("Test error handling", func() {
 			testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/empty-templates.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking for the error event")
 		Eventually(checkForEvent("default.case2-empty-templates", ""), defaultTimeoutSeconds, 1).Should(BeFalse())
@@ -241,7 +241,7 @@ var _ = Describe("Test error handling", func() {
 		By("Creating the ConfigurationPolicy on the managed cluster directly")
 		_, err := utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/working-policy-configpol.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		managedPlc := utils.GetWithTimeout(
 			clientManagedDynamic,
@@ -254,7 +254,7 @@ var _ = Describe("Test error handling", func() {
 
 		_, err = utils.KubectlWithOutput("apply", "-f", "../resources/case2_error_test/working-policy.yaml",
 			"-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking for the error event")
 		Eventually(

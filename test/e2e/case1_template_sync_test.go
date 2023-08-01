@@ -25,7 +25,7 @@ var _ = Describe("Test template sync", func() {
 	BeforeEach(func() {
 		By("Creating a policy on managed cluster in ns:" + testNamespace)
 		_, err := utils.KubectlWithOutput("apply", "-f", case1PolicyYaml, "-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		plc := utils.GetWithTimeout(clientManagedDynamic, gvrPolicy, case1PolicyName, testNamespace, true,
 			defaultTimeoutSeconds)
 		Expect(plc).NotTo(BeNil())
@@ -35,7 +35,7 @@ var _ = Describe("Test template sync", func() {
 		_, err := utils.KubectlWithOutput("delete", "-f", case1PolicyYaml, "-n", testNamespace)
 		var e *exec.ExitError
 		if !errors.As(err, &e) {
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 		}
 		opt := metav1.ListOptions{}
 		utils.ListWithTimeout(clientManagedDynamic, gvrPolicy, opt, 0, true, defaultTimeoutSeconds)
@@ -57,7 +57,7 @@ var _ = Describe("Test template sync", func() {
 		plc.Object["spec"].(map[string]interface{})["remediationAction"] = "enforce"
 		plc, err := clientManagedDynamic.Resource(gvrPolicy).Namespace("managed").Update(context.TODO(), plc,
 			metav1.UpdateOptions{})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 		Expect(plc.Object["spec"].(map[string]interface{})["remediationAction"]).To(Equal("enforce"))
 		By("Checking template policy remediationAction")
 		yamlStr := "../resources/case1_template_sync/case1-config-policy-enforce.yaml"
@@ -73,7 +73,7 @@ var _ = Describe("Test template sync", func() {
 		By("Updating policy with no remediationAction")
 		_, err := utils.KubectlWithOutput("apply", "-f",
 			"../resources/case1_template_sync/case1-test-policy-no-remediation.yaml", "-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		By("Checking template policy remediationAction")
 		yamlTrustedPlc := utils.ParseYaml(
 			"../resources/case1_template_sync/case1-config-policy-enforce.yaml")
@@ -108,7 +108,7 @@ var _ = Describe("Test template sync", func() {
 	It("should delete template policy on managed cluster", func() {
 		By("Deleting parent policy")
 		_, err := utils.KubectlWithOutput("delete", "-f", case1PolicyYaml, "-n", testNamespace)
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(HaveOccurred())
 		opt := metav1.ListOptions{}
 		utils.ListWithTimeout(clientManagedDynamic, gvrPolicy, opt, 0, true, defaultTimeoutSeconds)
 		By("Checking the existence of template policy")

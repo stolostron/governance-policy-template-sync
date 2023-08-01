@@ -258,19 +258,19 @@ func (r *PolicyReconciler) Reconcile(ctx context.Context, request reconcile.Requ
 				}
 
 				continue
-			} else {
-				// a different error getting template object from cluster
-				resultError = err
-				errMsg := fmt.Sprintf("Failed to get the object in the policy template: %s", err)
-
-				r.emitTemplateError(instance, tIndex, tName, errMsg)
-				tLogger.Error(err, "Failed to get the object in the policy template",
-					"namespace", instance.GetNamespace(),
-					"kind", gvk.Kind,
-				)
-
-				continue
 			}
+
+			// a different error getting template object from cluster
+			resultError = err
+			errMsg := fmt.Sprintf("Failed to get the object in the policy template: %s", err)
+
+			r.emitTemplateError(instance, tIndex, tName, errMsg)
+			tLogger.Error(err, "Failed to get the object in the policy template",
+				"namespace", instance.GetNamespace(),
+				"kind", gvk.Kind,
+			)
+
+			continue
 		}
 
 		refName := ""
